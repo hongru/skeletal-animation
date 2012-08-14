@@ -1,0 +1,43 @@
+body,ol,ul,dl,p,h1,h2,h3,h4,h5,h6 {
+    margin: 0;
+    padding: 0;
+}
+body {
+    background: #f7f7f7;
+    font: 14px/1.5 Microsoft Yahei, Arail;
+}
+.doc {
+    width: 800px;
+    margin: 0 auto;
+}
+h1 {
+    padding: 20px 0;
+    text-align: center;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 10px;
+}
+.box {
+    min-height: 100px;
+    border: 1px solid #ccc;
+    background: #fff;
+    margin-bottom: 10px;
+}
+.box h4 {
+    height: 34px;
+    line-height: 34px;
+    font-size: 14px;
+    padding: 0 10px;
+    background: #f3f3f3;
+    border-bottom: 1px solid #ccc;
+}
+.bones-canvas {
+    height: 400px;
+}
+.tit-info {
+    font-size: 12px;
+    color: #999;
+    font-weight: normal;
+}
+.dragover {
+    background: #B6D7F8;
+}

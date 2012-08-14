@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8" />
+<style>
+	html {
+		overflow: hidden;
+	}
+	body {
+		margin: 0px;
+		padding: 0px;
+		background: #222;
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		cursor: crosshair;
+	}
+	#canvas {
+		position:absolute;
+		left: 0%;
+		top: 0%;
+		width: 100%;
+		height: 100%;
+		background: #000;
+		overflow: hidden;
+	}
+</style>
+<script>
+/* ===== global vars ===== */
+var dolls = [];
+var xm = 0;
+var ym = 0;
+var nx = 0;
+var ny = 0;
+var nw = 0;
+var nh = 0;
+var canvas;
+var context;
+var sphere;
+var sw;
+var isCanvas = true;
+
+/* ===== screen resize ===== */
+function resize() {
+	var o = document.getElementById("canvas");
+	nw = o.offsetWidth;
+	nh = o.offsetHeight;
+	for (nx = 0, ny = 0; o != null; o = o.offsetParent) {
+		nx += o.offsetLeft;
+		ny += o.offsetTop;
+	}
+	if (canvas) {
+		canvas.resize(nw, nh);
+		sw = nh / 4;
+		sphere.style.width = sphere.style.height = sw + 'px';
+	}
+}
+onresize = resize;
+
+/* ===== mouse position ===== */
+document.onmousemove = function(e){
+	if (window.event) e=window.event;
+	xm = (e.x || e.clientX);
+	ym = (e.y || e.clientY);
+}
+
+
+///////////////////////////////// ==== ragdoll engine ==== //////////////////////////////////////////////
+
+/* ====== constructor Points ====== */
+function Point(doll) {
+	this.x  = doll.x + Math.random();
+	this.y  = 10 + Math.random();
+	this.xb = this.x;
+	this.yb = this.y + 2;
+	this.w  = 0;
+	this.links = [];
+	this.stiffness = doll.stiffness;
+	
+	this.anim = function (){
+		/* ==== calculates links angles ==== */
+		for (var i = 0, o; o = this.links[i++]; o.trigo());
+		/* ==== inertia + stiffness ==== */
+		var vx  = (this.x - this.xb) * this.stiffness;
+		var vy  = (this.y - this.yb) * this.stiffness;
+		this.xb = this.x;
+		this.yb = this.y;
+		this.x += vx;
+		this.y += vy;
+		/* ==== mouse collision ==== */
+		var dx = this.x - (xm - nx);
+		var dy = this.y - (ym - ny);
+		var d  = Math.sqrt(dx * dx + dy * dy);
+		var w  = (sw + this.w) * .5;
+		if (d < w) {
+			d = Math.abs(w - d);
+			a = Math.atan2(dy, dx);
+			this.x += d * Math.cos(a);
+			this.y += d * Math.sin(a);
+		}
+		/* ==== screen limits ==== */
+		if (this.y < 0) {
+			this.y  = 0;
+			this.yb = -5;
+		}
+		else if (this.y > nh) {
+			this.y  = nh;
+			this.yb = nh + 5;
+		}
+		if (this.x < 0) {
+			this.x  = 0;
+			this.xb = -5;
+		}
+		else if (this.x > nw) {
+			this.x  = nw;
+			this.xb = nw + 5;
+		}
+    }
+}
+
+/* ====== creates point ====== */
+function createPoint(doll, i, link, width) {
+	if (!doll.points[i]) doll.points[i] = new Point(doll);
+	var o = doll.points[i];
+	/* ==== link to point ==== */
+	if (link) {
+		if (width > o.w) o.w = width;
+		o.links.push(link);
+	}
+	return o;
+}
+
+/* ====== constructor Links ====== */
+function Link(doll, point0, point1, length, width, image, zindex) {
+	this.height = length * doll.s;
+	this.width  = width * doll.s;
+	this.image  = image;
+	this.p0     = createPoint(doll, point0, this, this.width);
+	this.p1     = createPoint(doll, point1);
+
+	/* ==== Constraints ==== */
+	this.constraint = function() {
+		var parangle = this.parent.angle;
+		var argMax   = this.maxi;
+		var argMin   = this.mini;
+		var inv      = this.inv;
+		/* ==== aligns quadrants ==== */
+		while (this.angle - parangle >  Math.PI ) this.angle -= Math.PI * 2;
+		while (this.angle - parangle < -Math.PI ) this.angle += Math.PI * 2;
+		/* ==== tests limits ==== */
+		var a = this.angle - parangle;
+		if (a > 0) {
+			if (inv) {
+				if (a < argMax) this.angle = parangle + argMax;
+			} else {
+				if (argMax < a) this.angle = parangle + argMax;
+			}
+		} else {
+			if (inv) {
+				if (a > -argMin) this.angle = parangle - argMin;
+			} else {
+				if (-argMin > a) this.angle = parangle - argMin;
+			}
+		}
+		/* ==== recalculates position ==== */
+		this.p1.x = this.p0.x + Math.cos(this.angle) * this.height;
+		this.p1.y = this.p0.y + Math.sin(this.angle) * this.height;
+		this.dx0  = this.p1.x - this.p0.x;
+		this.dy0  = this.p1.y - this.p0.y;
+	}
+		
+	/* ==== calculates links angles ==== */
+	this.trigo = function () {
+		/* ==== angle ====*/
+		this.dx0   = this.p1.x - this.p0.x;
+		this.dy0   = this.p1.y - this.p0.y;
+		this.angle = Math.atan2(this.dy0, this.dx0);
+		/* ==== Constraints ==== */
+		if (this.parent) this.constraint();
+		/* ==== inverse kinematics ==== */
+		var d  = Math.sqrt(this.dx0 * this.dx0 + this.dy0 * this.dy0);
+		var d0 = (this.height - d) * .5;
+		var dx = this.dx0 / d * d0;
+		var dy = this.dy0 / d * d0;
+		var rx = .1 * (Math.random() - .5);
+		var ry = .1 * (Math.random() - .5);
+		this.p0.x -= (dx + rx);
+		this.p0.y -= (dy + ry);
+		this.p1.x += (dx + rx);
+		this.p1.y += (dy + ry);
+		/* ==== saves point for rendering ==== */
+		this.x = this.p0.x;
+		this.y = this.p0.y;
+		this.d = d;
+	}
+	
+	/* ==== add angle limits ==== */
+	this.addConstraint = function(parent, mini, maxi) {
+		if (mini < 0) this.inv = true;
+		this.mini   = Math.abs(mini);
+		this.maxi   = Math.abs(maxi);
+		this.parent = parent;
+	}
+	
+	/* ==== rendering ==== */
+	this.draw = function () {
+		this.img.drawImage(
+			this.x,
+			this.y,
+			this.angle,
+			1,
+			this.width * .15,
+			this.width * .5,
+			this.d + this.width * .3,
+			this.width
+		);
+	}
+	
+	doll.render[zindex] = this;
+}
+
+/* ====== constructor Doll ====== */
+function Doll(x, size, stiffness, structure) {
+	this.x = x;
+	this.s = size;
+	this.stiffness = stiffness;
+	this.points = [];
+	this.render = [];
+
+	/* ==== loads structure ==== */
+	for (var link in structure) {
+		var L = structure[link];
+		if(link == 'constraints') {
+			for (var i = 0; i < L.length; i++) {
+				var o = L[i];
+				structure[o[0]].link.addConstraint(structure[o[1]].link,  o[2], o[3]);
+			}
+		} else {
+			structure[link].link = new Link(this, L[0], L[1], L[2], L[3], L[4], L[5]);
+		}
+	}	
+	/* ===== creates HTML images in zIndex order ===== */
+	for (var i = 0, o; o = this.render[i++]; o.img = createImage(o.image, "nearest"));
+	
+	/* ==== animate points ==== */
+	this.anim = function () {
+		for (var i = 0, o; o = this.points[i++]; o.anim());
+		for (var i = 0, o; o = this.render[i++]; o.draw());
+	}
+	
+	/* ==== collision with another doll ==== */
+	this.collide = function (doll) {
+		for (var i = 0, o1; o1 = this.points[i++];) {
+			for (var j = 0, o2; o2 = doll.points[j++];) {
+				var dx = o1.x - o2.x;
+				var dy = o1.y - o2.y;
+				var d  = Math.sqrt(dx * dx + dy * dy);
+				var w  = (o1.w + o2.w) * .5;
+				if (d < w){
+					d = Math.abs(w - d);
+					var a  = Math.atan2(dy, dx);
+					var vx = d * Math.cos(a) * .5;
+					var vy = d * Math.sin(a) * .5;
+					o1.x += vx;
+					o1.y += vy;
+					o2.x -= vx;
+					o2.y -= vy;
+				}
+			}
+		}
+	}
+}
+
+
+function run(){
+	/* ===== main loop ===== */
+	if (isCanvas) context.clearRect(0, 0, nw, nh);
+	if (sphere) {
+		sphere.style.left = (xm - nx - sw * .5) + 'px';
+		sphere.style.top  = (ym - ny - sw * .5) + 'px';
+	}
+	dolls[0].anim();
+	dolls[1].anim();
+	dolls[0].collide(dolls[1]);
+	setTimeout(run, 16);
+}
+
+function createCanvas (o) {
+	if (isCanvas) {
+		canvas = document.createElement("canvas");
+		canvas.style.position = "absolute";
+		canvas.style.width = nw + "px";
+		canvas.style.height = nh + "px";
+		o.appendChild(canvas);
+		context = canvas.getContext("2d");
+		canvas.resize = function(w, h) {
+			if (canvas) {
+				canvas.width = w;
+				canvas.height = h;
+				canvas.style.width = w + "px";
+				canvas.style.height = h + "px";
+			}
+		}
+		return canvas;
+	} else {
+		o.resize = function(w, h) {
+			return false;
+		}
+		return o;
+	}
+}
+
+function createImage (imgsrc, FilterType) {
+    img = new Image();
+    var cont = document.getElementById("canvasImages") ? document.getElementById("canvasImages") : document.getElementById("matrixImages");
+    img.src = cont.getElementsByTagName("img").item(imgsrc).src;
+    img.sx = 0;
+    img.sy = 0;
+    img.w = 0;
+    img.h = 0;
+    img.loaded = false;
+    img.onload = function(){
+        this.sx = this.width * .5;
+        this.sy = this.height * .5;
+        this.w = this.width;
+        this.h = this.height;
+        this.loaded = true;
+    }
+
+    img.drawImage = function(x, y, rotation, alpha, sx, sy, w, h) { 
+        if (sx == undefined) sx = this.sx, sy = this.sy;
+        if (w == undefined) w = this.w, h = this.h;
+        if(this.loaded) {
+            context.save();
+            context.globalAlpha = alpha;
+            context.translate(x, y);
+            context.rotate(rotation);
+            context.drawImage(this, Math.round(-sx), Math.round(-sy), Math.round(w), Math.round(h));
+            context.restore();
+        }
+    }
+    return img;
+}
+
+onload = function() {
+	/* ==== starts script ==== */
+	sphere = document.getElementById("sphere");
+	canvas = createCanvas(document.getElementById("canvas"));
+	resize();
+	
+	var structure = {
+		//     p0,p1,   H,W,    img,  zIndex
+		body : [0, 1,    9,5,     1,    7],
+		arm1 : [0, 6,    3,3,     3,    0],
+		ar11 : [6, 7,    5,2.5,   6,    1],
+		arm2 : [0, 8,    5,3,     3,    8],
+		ar21 : [8, 9,    5,2.5,   5,    9],
+		head : [0, 10,   4,4.5,   2,    6],
+		leg1 : [1, 2,    6,3.5,   0,    2],
+		le11 : [2, 3,    7,5,     4,    3],
+		leg2 : [1, 4,    6,3.5,   0,    4],
+		le21 : [4, 5,    7,5,     4,    5],
+		
+		constraints : [
+			//   L0,     L1, aMin, aMax
+			['le21', 'leg2',   .3,  2.5],
+			['le11', 'leg1',   .3,  2.5],
+			['ar11', 'arm1',    3,   .1],
+			['ar21', 'arm2',    3,   .1],
+			['head', 'body', -1.5,  2  ],
+			['leg1', 'body',  2.5,  1.2],
+			['leg2', 'body',  2.5,  1.2]
+		]
+	};
+
+	dolls[0] = new Doll(nw * .25, nh / 50, .998, structure);
+	dolls[1] = new Doll(nw * .75, nh / 50, .998, structure);
+	
+	run();
+}
+</script>
+
+<div id="canvas">
+<img id="sphere" alt="" src="./lf1.gif" style="position:absolute;opacity:0.3;filter:alpha(opacity=30);left:-1000px;">
+</div>
+<div id="canvasImages">
+	<img alt="0" src="./rd01.png">
+	<img alt="1" src="./rd08.png">
+	<img alt="2" src="./rd04.png">
+	<img alt="3" src="./rd05.png">
+	<img alt="4" src="./rd06.png">
+	<img alt="5" src="./rd07.png">
+	<img alt="6" src="./rd09.png">
+</div>
+</html>

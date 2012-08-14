@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<meta charset="utf-8" />
+<script src="../lib/laro.0.4.js" ></script>
+
+<canvas id="canvas" width="600" height="400"></canvas>
+<script>
+var Segment = Laro.Sprite.extend(function (stage, fn) {
+    this.joints = {};
+}).methods({
+    circle: function (x, y, radius, lineW) {
+        if (lineW) this.ctx.lineWidth = lineW;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius, 0, Math.PI*2, true);
+        this.ctx.stroke();
+        this.ctx.closePath();
+    },
+    setFixed: function (x, y) {
+        
+    },
+    setJoint: function (name, x, y) {
+        if (!this.joints) this.joints = {};
+        this.joints[name] = {x: x, y: y};
+    },
+    getJoint: function (name) {
+        return this.joints[name];
+    },
+    pos: function (x, y) {
+        if (x == undefined && y == undefined) {
+            return {x: this.x, y: this.y};
+        }
+        this.x = x;
+        this.y = y;
+    },
+    getJointAbsPos: function (name) {
+        if (this.joints[name]) {
+            var j = this.joints[name];
+            var dis = Math.sqrt(Math.pow(this.joints['fixed'].x - j.x, 2) + Math.pow(this.joints['fixed'].y - j.y, 2));
+            var angle = this.rotation * Math.PI / 180,
+                xPos = this.x + Math.cos(angle) * dis,
+                yPos = this.y + Math.sin(angle) * dis;
+            return {x: xPos, y: yPos};
+        }
+    },
+    setPosByJoint: function (seg, joint) {
+        if (seg instanceof Segment && seg.joints[joint]) {
+            this.x = seg.getJointAbsPos(joint).x - (this.joints['fixed'].x - seg.joints['fixed'].x);
+            this.y = seg.getJointAbsPos(joint).y - (this.joints['fixed'].y - seg.joints['fixed'].y);
+        }
+    }
+    
+}).statics({
+    DEBUG: true
+});
+
+var canvas, stage;
+function createBone (width, height) {
+    return new Segment(stage, function () {
+        this.width = width;
+        this.height = height;
+
+        this.rotation = 0;
+        
+        this.draw = function () {
+            var ctx = stage.ctx;
+            ctx.save();
+            
+            var fixed = this.joints['fixed'];
+            ctx.translate(fixed.x, fixed.y);
+            ctx.rotate(this.rotation * Math.PI/180);
+            ctx.translate(-fixed.x, -fixed.y);
+            
+            ctx.lineWidth = 1;
+            ctx.strokeRect(1, 1, this.width, this.height);
+
+            if (Segment.DEBUG) {
+                for (var k in this.joints) { 
+                    this.circle(this.joints[k].x, this.joints[k].y, 2);
+                }
+            }
+            
+            ctx.restore();
+        }
+    });
+}
+
+canvas = document.getElementById('canvas');
+stage = new Laro.Stage(canvas);
+
+var bone0 = createBone(120, 20);
+bone0.pos(200, 150);
+bone0.setJoint('fixed', 10, 10);
+bone0.setJoint('leg', 110, 10);
+
+var bone1 = createBone(120, 20);
+bone1.setJoint('fixed', 10, 10);
+bone1.setPosByJoint(bone0, 'leg');
+
+var cycle = 0;
+var looper = new Laro.Loop(function (dt) {
+    cycle += 0.02;
+    var angle = Math.sin(cycle) * 90;
+    bone0.rotation = angle;
+    bone1.rotation = bone0.rotation + angle;
+    bone1.setPosByJoint(bone0, 'leg');
+
+    stage.clear();
+    stage.dispatchDraw();
+});
+
+
+
+</script>
+</html>
