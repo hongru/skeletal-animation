@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Skeletal Animation Editor</title>
+<link href="css/main.css" rel="stylesheet" />
+</head>
+
+<body>
+    <div class="doc">
+        <h1>Skeletal Animation Editor</h1>
+        
+        <div class="box">
+            <h4>Texture处理区 <span class="tit-info">拖拽素材到以下区域进行处理</span></h4>
+            <div class="cvs-container" id="texture-container">
+                <canvas id="texture-canvas" class="texture-canvas"></canvas>
+            </div>
+        </div>
+        
+        <div class="box">
+            <h4>骨骼关键帧处理区</h4>
+            <div class="cvs-container">
+                <canvas id="bones-canvas" class="bones-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/ske.js"></script>
+    <script src="js/texture.js"></script>
+    <script src="js/ske.start.js"></script>
+    <script>
+        ske.start();
+    </script>
+</body>
+</html>

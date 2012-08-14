@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<meta charset="utf-8" />
+<script src="../lib/laro.0.4.js" ></script>
+
+<script>
+g_data = {
+    name: 'demo1',
+    bones: {
+        body: {
+            x: 200,
+            y: 100,
+            rotation: 0,
+            joints: {
+                head: {x: 100, y: 100},
+                armL: {x: 150, y: 150},
+                armR: {x: 150, y: 150},
+                legL: {x: 300, y: 300},
+                legR: {x: 300, y: 300}
+            }
+        },
+        head: {
+            parent: 'body',
+            x: 0,
+            y: 0,
+            rotation: 0,
+            joints: {
+                body: {x: 0, y: 0}
+            }
+        },
+        armL: {
+            parent: 'body',
+            x: 0,
+            y: 0,
+            rotation: 30,
+            joints: {
+                body: {x: 0, y: 0}
+            }
+        },
+        armR: {
+            parent: 'body',
+            x: 0,
+            y: 0,
+            rotation: -30,
+            joints: {
+                body: {x: 0, y: 0}
+            }
+        },
+        legL: {
+            parent: 'body',
+            x: 0,
+            y: 0,
+            rotation: 30,
+            joints: {
+                body: {x: 0, y: 0}
+            }
+        },
+        legR: {
+            parent: 'body',
+            x: 0,
+            y: 0,
+            rotation: -30,
+            joints: {
+                body: {x: 0, y: 0}
+            }
+        }
+    },
+
+    animations: {
+        stand: [
+            {}
+        ]
+    }
+};
+</script>
+
+</html>

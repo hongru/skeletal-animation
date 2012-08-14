@@ -1,0 +1,356 @@
+<!doctype html>
+<html>
+<meta charset="utf-8" />
+<script src="../lib/laro.0.4.js" ></script>
+
+<canvas id="canvas" width="800" height="600"></canvas>
+<script>
+var Segment = Laro.Sprite.extend(function (stage, fn) {
+    this.joints = {};
+}).methods({
+    circle: function (x, y, radius, lineW) {
+        if (lineW) this.ctx.lineWidth = lineW;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius, 0, Math.PI*2, true);
+        this.ctx.stroke();
+        this.ctx.closePath();
+    },
+    setFixed: function (x, y) {
+        
+    },
+    setJoint: function (name, x, y) {
+        if (!this.joints) this.joints = {};
+        this.joints[name] = {x: x, y: y};
+    },
+    getJoint: function (name) {
+        return this.joints[name];
+    },
+    pos: function (x, y) {
+        if (x == undefined && y == undefined) {
+            return {x: this.x, y: this.y};
+        }
+        
+        if (typeof x == 'object') {
+            this.x = x.x;
+            this.y = x.y;
+        } else {
+            this.x = x;
+            this.y = y;
+        }
+    },
+    getJointAbsPos: function (name) {
+        if (this.joints[name]) {
+            var j = this.joints[name];
+            var angle = this.rotation * Math.PI / 180,
+                disX = j.x - this.joints['fixed'].x,
+                disY = j.y - this.joints['fixed'].y,
+                xPos = this.x + Math.cos(angle) * disX - Math.sin(angle) * disY,
+                yPos = this.y + Math.sin(angle) * disX + Math.cos(angle) * disY;
+            return {x: xPos, y: yPos};
+        }
+    },
+
+    setPosByJoint: function (seg, joint) {
+        if (seg instanceof Segment && seg.joints[joint]) {
+            this.x = seg.getJointAbsPos(joint).x - (this.joints['fixed'].x - seg.joints['fixed'].x);
+            this.y = seg.getJointAbsPos(joint).y - (this.joints['fixed'].y - seg.joints['fixed'].y);
+        }
+    }
+    
+}).statics({
+    DEBUG: true
+});
+
+var canvas, stage, scale = 0.5;
+function createBone (data, drawFn) {
+    if (!drawFn) {
+        drawFn = function () {
+        /*
+            this.ctx.lineWidth = 1;
+            this.ctx.fillStyle = '#fff';
+            this.ctx.fillRect(1, 1, this.width, this.height);
+            this.ctx.strokeRect(1, 1, this.width, this.height);
+            */
+            if (data.texture) {
+                var img = new Image();
+                img.src = data.texture.img;
+                this.ctx.drawImage(img, data.texture.area[0], data.texture.area[1], data.texture.area[2], data.texture.area[3], 0, 0, data.width, data.height)
+            }
+        }
+    }
+    return new Segment(stage, function () {
+        this.width = data.width;
+        this.height = data.height;
+
+        this.rotation = 0;
+        
+        this.draw = function () {
+            var ctx = stage.ctx;
+            ctx.save();
+            
+            var fixed = this.joints['fixed'];
+            ctx.translate(fixed.x, fixed.y);
+            ctx.rotate(this.rotation * Math.PI/180);
+            ctx.translate(-fixed.x, -fixed.y);
+            
+            drawFn.call(this);
+
+            if (Segment.DEBUG) {
+                for (var k in this.joints) { 
+                    this.circle(this.joints[k].x, this.joints[k].y, 2);
+                }
+            }
+            
+            ctx.restore();
+        }
+    });
+}
+
+/* data */
+var g_data = {
+    person1: {
+        bones: {
+            thighL: {
+                width: 154,
+                height: 73,
+                x: 400,
+                y: 300,
+                z: -1,
+                rotation: 0,
+                joints: {
+                    fixed: {x: 10, y: 36},
+                    leg: {x: 140, y: 36}
+                },
+                texture: {
+                    img: './doll1/rd01.png',
+                    area: [0, 0, 154, 73]
+                },
+                parent: '$FIXED_POS$'
+            },
+            calfL: {
+                width: 187,
+                height: 119,
+                x: 400,
+                y: 300,
+                z: -1,
+                rotation: 0,
+                joints: {
+                    fixed: {x: 10, y: 70}
+                },
+                texture: {
+                    img: './doll1/rd06.png',
+                    area: [0, 0, 187, 119]
+                },
+                parent: ['thighL', 'leg']
+            },
+            thighR: {
+                width: 154,
+                height: 73,
+                x: 400,
+                y: 300,
+                z: 1,
+                rotation: 0,
+                joints: {
+                    fixed: {x: 10, y: 36},
+                    leg: {x: 140, y: 36}
+                },
+                texture: {
+                    img: './doll1/rd01.png',
+                    area: [0, 0, 154, 73]
+                },
+                parent: '$FIXED_POS$'
+            },
+            calfR: {
+                width: 187,
+                height: 119,
+                x: 400,
+                y: 300,
+                z: 1,
+                rotation: 0,
+                joints: {
+                    fixed: {x: 10, y: 70}
+                },
+                texture: {
+                    img: './doll1/rd06.png',
+                    area: [0, 0, 187, 119]
+                },
+                parent: ['thighR', 'leg']
+            },
+            body : {
+                width: 252,
+                height: 102,
+                x: 400,
+                y: 300,
+                z: 0,
+                rotation: 95,
+                joints: {
+                    fixed: {x: 240, y: 50},
+                    head: {x: 30, y: 50}
+                },
+                texture: {
+                    img: './doll1/rd08.png',
+                    area: [0, 0, 252, 102]
+                },
+                parent: ['thighL', 'fixed']
+            },
+            arm0: {
+                width: 135,
+                height: 66,
+                x: 400,
+                y: 300,
+                z: -1,
+                rotation: 5,
+                joints: {
+                    fixed: {x: 10, y: 20},
+                    arm: {x: 125, y: 33}
+                },
+                texture: {
+                    img: './doll1/rd05.png',
+                    area: [0, 0, 135, 66]
+                },
+                parent: ['body', 'head']
+            },
+            arm1: {
+                width: 146,
+                height: 61,
+                x: 400,
+                y: 300,
+                z: -2,
+                rotation: 5,
+                joints: {
+                    fixed: {x: 10, y: 30}
+                },
+                texture: {
+                    img: './doll1/rd09.png',
+                    area: [0, 0, 146, 61]
+                },
+                parent: ['arm0', 'arm']
+            },
+            arm2: {
+                width: 135,
+                height: 66,
+                x: 400,
+                y: 300,
+                z: 1,
+                rotation: 5,
+                joints: {
+                    fixed: {x: 10, y: 20},
+                    arm: {x: 125, y: 33}
+                },
+                texture: {
+                    img: './doll1/rd05.png',
+                    area: [0, 0, 135, 66]
+                },
+                parent: ['body', 'head']
+            },
+            arm3: {
+                width: 130,
+                height: 56,
+                x: 400,
+                y: 300,
+                z: 2,
+                rotation: 5,
+                joints: {
+                    fixed: {x: 10, y: 30}
+                },
+                texture: {
+                    img: './doll1/rd07.png',
+                    area: [0, 0, 130, 56]
+                },
+                parent: ['arm2', 'arm']
+            },
+            head: {
+                width: 108,
+                height: 83,
+                x: 400,
+                y: 300,
+                z: -1,
+                rotation: -85,
+                joints: {
+                    fixed: {x: -5, y: 40}
+                },
+                texture: {
+                    img: './doll1/rd04.png',
+                    area: [0, 0, 108, 83]
+                },
+                parent: ['body', 'head']
+            }
+        }
+    }
+}
+
+canvas = document.getElementById('canvas');
+stage = new Laro.Stage(canvas);
+var fixedPos = {x: 400, y:300};
+
+function extend(tar, source, isOverwrite) {
+    if (isOverwrite == undefined) isOverwrite = true;
+    for (var k in source) {
+        if (!(k in tar) || isOverwrite) {
+            tar[k] = source[k];
+        }
+    }
+    return tar;
+}
+
+var bones = {};
+function initBones (data) {
+    for (var k in data) {
+        if (data[k].parent == '$FIXED_POS$') {
+            var bone = createBone(data[k]);
+            bones[k] = extend(bone, data[k]);
+        } else {
+            var bone = createBone(data[k]);
+            var p = data[k].parent;
+            bones[k] = extend(bone, data[k]);
+            bone.setPosByJoint(bones[p[0]], p[1]);
+        }
+    }
+}
+
+function walkLeg (segA, segB, c) {
+    var angleA = Math.sin(c) * 45 + 90,
+        angleB = Math.sin(c - Math.PI/2) * 45 + 45;
+    segA.rotation = angleA;
+    segB.rotation = segA.rotation + angleB;
+    
+    segB.setPosByJoint(segA, 'leg');
+}
+
+function walkArm (segA, segB, c) {
+    var angleA = Math.sin(c) * 45 + 90,
+        angleB = Math.sin(c + Math.PI/2) * 45 + 45;
+    segA.rotation = angleA;
+    segB.rotation = segA.rotation - angleB;
+    
+    segB.setPosByJoint(segA, 'arm');
+}
+
+var cycle = 0;
+initBones(g_data.person1.bones);
+stage.children.sort(function (a, b) { return a.z > b.z })
+var looper = new Laro.Loop(function (dt) {
+    cycle += 0.04;
+    
+    bones.body.rotation = Math.sin(cycle) * 5 + 95;
+    bones.head.rotation = Math.sin(cycle) * 10 - 85;
+    bones['arm0'].setPosByJoint(bones['body'], 'head');
+    bones['arm2'].setPosByJoint(bones['body'], 'head');
+    bones['head'].setPosByJoint(bones['body'], 'head');
+    walkLeg(bones['thighL'], bones['calfL'], cycle);
+    walkLeg(bones['thighR'], bones['calfR'], cycle + Math.PI);
+    walkArm(bones['arm0'], bones['arm1'], cycle);
+    walkArm(bones['arm2'], bones['arm3'], cycle + Math.PI);
+    
+
+    stage.clear();
+    stage.ctx.save();
+    stage.ctx.scale(scale, scale);
+    stage.dispatchDraw();
+    stage.ctx.restore();
+});
+
+stage.dispatchDraw();
+
+</script>
+</html>
