@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<meta charset="utf-8" />
+<script src="../lib/laro.0.4.js" ></script>
+<script src="./segment.js"></script>
+
+<canvas id="canvas" width="800" height="400"></canvas>
+<script>
+;(function () {
+
+    var n = 6, segs = [], stage, canvas, ctx, looper, mouseX, mouseY;
+
+    function createSegs () {
+        for (var i = 0; i < n; i ++) {
+            var seg = new Segment(stage, function () {
+                this.width = 40;
+                this.height = 6;
+                this.x = 0;
+                this.y = 0;
+                this.rotation = 0;
+                
+                this.draw = function () {
+                    var ctx = stage.ctx;
+                    ctx.save();
+                    
+                    var fixed = this.joints['fixed'];
+                    ctx.translate(fixed.x, fixed.y);
+                    ctx.rotate(this.rotation * Math.PI/180);
+                    ctx.translate(-fixed.x, -fixed.y);
+                    
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(1, 1, this.width, this.height);
+                    
+                    if (Segment.DEBUG) {
+                        for (var k in this.joints) { 
+                            this.circle(this.joints[k].x, this.joints[k].y, 2);
+                        }
+                    }
+                    
+                    ctx.restore();
+                }
+            });
+            
+            seg.setJoint('fixed', 5, 4);
+            seg.setJoint('end', 35, 4);
+            
+            segs.push(seg);
+        }
+    }
+    
+    function update (dt) {
+        follow(segs[0], mouseX, mouseY)
+        for (var i = 1; i < segs.length; i ++) {
+            follow(segs[i], segs[i - 1].x, segs[i - 1].y);
+        }
+
+    }
+    
+    function follow (segA, xpos, ypos) {
+        var dx = xpos - segA.x,
+            dy = ypos - segA.y,
+            angle = Math.atan2(dy, dx);
+        segA.rotation = angle * 180;
+        
+        var w = segA.getJointAbsPos('end').x - segA.x,
+            h = segA.getJointAbsPos('end').y - segA.y;
+        //console.log(w, h)
+        segA.x = xpos;
+        segA.y = ypos;
+    }
+    
+    function init () {
+        canvas = document.querySelector('canvas');
+        stage = new Laro.Stage(canvas);
+        stage.addEventListener('mousemove', function (x, y) { 
+            mouseX = x;
+            mouseY = y;
+        });
+        createSegs();
+        
+        looper = new Laro.Loop(function (dt) {
+            stage.ctx.clearRect(0, 0, canvas.width, canvas.height);
+            update(dt);
+            stage.dispatchDraw();
+        });   
+    }
+    
+    onload = init;
+})();
+</script>
+</html>

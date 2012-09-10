@@ -1,6 +1,7 @@
 var ske = {};
 ske.texture = {};
 ske.util = {};
+ske.bones = {};
 
 ske.extend = function (tar, sour, isOw) {
     if (isOw == undefined) isOw = true;
@@ -19,4 +20,24 @@ ske.qs = function (sel) {
 };
 ske.qsa = function (sel) {
     return document.querySelectorAll(sel);
+};
+
+ske.util.getActiveEl = function (fromEl, cmd, lev) {
+    if (cmd == undefined) cmd = 'cmd';
+    if (lev == undefined) lev = 3;
+    
+    if (fromEl && fromEl.getAttribute(cmd)) {
+        return fromEl;
+    }
+    while(lev--) {
+        fromEl = fromEl.parentNode;
+        if (fromEl == document.documentElement) {
+            return fromEl.getAttribute(cmd) ? fromEl : null;
+        }
+        if (fromEl.getAttribute(cmd)) {
+            return fromEl;
+        }
+    }
+    
+    return null;
 };

@@ -10,23 +10,44 @@
     <div class="doc">
         <h1>Skeletal Animation Editor</h1>
         
-        <div class="box">
-            <h4>Texture处理区 <span class="tit-info">拖拽素材到以下区域进行处理</span></h4>
+        <div class="box" id="texture-box">
+            <h4>Texture处理区 <span class="tit-info">拖拽素材到以下区域进行处理</span> </h4>
             <div class="cvs-container" id="texture-container">
-                <canvas id="texture-canvas" class="texture-canvas"></canvas>
+                <canvas id="texture-canvas" class="texture-canvas" width="798" height="160"></canvas>
+                <span id="imgName" class="img-name hide"></span>
+            </div>
+            <div class="texture-edit-area" id="texture-edit-area">
+                <div class="preview-head">Texture截取预览</div>
+                <canvas id="texturePreviewCanvas" class="texture-preview-canvas" width="798" height="40"></canvas>    
+            </div> 
+            
+            <div class="info-box">
+                <ul>
+                    <li><label>name:</label><input type="text" class="info-input" id="nameInput" /></li>
+                    <li><label>x: </label><input type="text" class="info-input" id="xInput" /></li>
+                    <li><label>y: </label><input type="text" class="info-input" id="yInput" /></li>
+                    <li><label>width: </label><input type="text" class="info-input" id="widthInput" /></li>
+                    <li><label>height: </label><input type="text" class="info-input" id="heightInput" /></li>
+                    <li><label>img: </label><input type="text" class="info-input" id="imgInput" /></li>
+                    <li class="btn-li">
+                        <a href="###" class="btn1 fr" cmd="addBone">添加</a>
+                    </li>
+                </ul>
             </div>
         </div>
         
-        <div class="box">
+        <div class="box" id="bone-box">
             <h4>骨骼关键帧处理区</h4>
             <div class="cvs-container">
-                <canvas id="bones-canvas" class="bones-canvas"></canvas>
+                <canvas id="bones-canvas" class="bones-canvas" width="798" height="400"></canvas>
             </div>
         </div>
     </div>
     
+    <script src="../lib/laro.0.4.js"></script>
     <script src="js/ske.js"></script>
     <script src="js/texture.js"></script>
+    <script src="js/ske.bones.js"></script>
     <script src="js/ske.start.js"></script>
     <script>
         ske.start();
